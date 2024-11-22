@@ -3,8 +3,9 @@ package main
 import (
 	"context"
 	"fmt"
-	"log"
+	stlog "log"
 	"luuk/distributed/grades"
+	"luuk/distributed/log"
 	"luuk/distributed/registry"
 	"luuk/distributed/service"
 )
@@ -13,8 +14,10 @@ import (
 func main() {
 	host, port := "localhost", "6000"
 	r := registry.Registration{
-		ServiceName: "Grade Service",
+		ServiceName: registry.GradeService,
 		ServiceURL: fmt.Sprintf("http://%s:%s", host, port),
+		RequiredService: []registry.ServiceName{registry.LogService},
+		ServiceUpdateURL: fmt.Sprintf("http://%s:%s", host, port) + "/services",
 	}
 	ctx, err := service.Start(
 		context.Background(),
@@ -24,7 +27,12 @@ func main() {
 		grades.RegisterHandlers,
 	)
 	if err != nil {
-		log.Fatal(err)
+		stlog.Fatal(err)
+	}
+
+	if logProvider, err := registry.GetProvider(registry.LogService); err == nil {
+		fmt.Printf("Logging service found at: %s\n", logProvider)
+		log.SetClientLogger(logProvider, r.ServiceName)
 	}
 	<- ctx.Done()
 	fmt.Println("Shutdown grading service")
