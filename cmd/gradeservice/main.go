@@ -10,14 +10,14 @@ import (
 	"luuk/distributed/service"
 )
 
-
 func main() {
 	host, port := "localhost", "6000"
 	r := registry.Registration{
-		ServiceName: registry.GradeService,
-		ServiceURL: fmt.Sprintf("http://%s:%s", host, port),
-		RequiredService: []registry.ServiceName{registry.LogService},
+		ServiceName:      registry.GradeService,
+		ServiceURL:       fmt.Sprintf("http://%s:%s", host, port),
+		RequiredService:  []registry.ServiceName{registry.LogService},
 		ServiceUpdateURL: fmt.Sprintf("http://%s:%s", host, port) + "/services",
+		HeartBeatURL:     fmt.Sprintf("http://%s:%s", host, port) + "/heartbeat",
 	}
 	ctx, err := service.Start(
 		context.Background(),
@@ -34,6 +34,6 @@ func main() {
 		fmt.Printf("Logging service found at: %s\n", logProvider)
 		log.SetClientLogger(logProvider, r.ServiceName)
 	}
-	<- ctx.Done()
+	<-ctx.Done()
 	fmt.Println("Shutdown grading service")
 }

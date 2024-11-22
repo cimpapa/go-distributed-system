@@ -18,6 +18,7 @@ func main() {
 		ServiceURL:  fmt.Sprintf("http://%s:%s", host, port),
 		RequiredService: make([]registry.ServiceName, 0),
 		ServiceUpdateURL: fmt.Sprintf("http://%s:%s", host, port) + "/services",
+		HeartBeatURL: fmt.Sprintf("http://%s:%s", host, port) + "/heartbeat",
 	}
 	ctx, err := service.Start(
 		context.Background(),
