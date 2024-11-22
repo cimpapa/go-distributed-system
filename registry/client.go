@@ -4,7 +4,8 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"log"
+	stlog "log"
+	"luuk/distributed/log"
 	"math/rand/v2"
 	"net/http"
 	"net/url"
@@ -19,12 +20,14 @@ func RegisterService(r Registration) error {
 	http.HandleFunc(heartBeatURL.Path, func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 	})
-	
+
 	serviceUpdateURL, err := url.Parse(r.ServiceUpdateURL)
 	if err != nil {
 		return err
 	}
-	http.Handle(serviceUpdateURL.Path, &serviceUpdateHandler{})
+	http.Handle(serviceUpdateURL.Path, &serviceUpdateHandler{
+		Name: r.ServiceName,
+	})
 
 	buf := new(bytes.Buffer)
 	enc := json.NewEncoder(buf)
@@ -60,7 +63,9 @@ func UnRegiserService(url string) error {
 	return nil
 }
 
-type serviceUpdateHandler struct{}
+type serviceUpdateHandler struct {
+	Name ServiceName
+}
 
 func (suh serviceUpdateHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
@@ -70,17 +75,31 @@ func (suh serviceUpdateHandler) ServeHTTP(w http.ResponseWriter, r *http.Request
 	dec := json.NewDecoder(r.Body)
 	var p patch
 	if err := dec.Decode(&p); err != nil {
-		log.Println(err)
+		stlog.Println(err)
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
 	fmt.Printf("Update Msg received %v\n", p)
 	prov.Update(p)
+	prov.SetLogger(p, suh.Name)
 }
 
 type providers struct {
 	services map[ServiceName][]string
-	mutex *sync.RWMutex
+	mutex    *sync.RWMutex
+}
+
+func (p *providers) SetLogger(pat patch, name ServiceName) {
+	for _, pE := range pat.Added {
+		if pE.Name == LogService {
+			if logProvider, err := GetProvider(LogService); err == nil {
+				fmt.Printf("Logging service found at: %s\n", logProvider)
+				log.SetClientLogger(logProvider, string(name))
+				// 调用服务进行测试，是可以写入到日志服务的文件中的
+				stlog.Printf("Logging service found at: %s\n", logProvider)
+			}
+		}
+	}
 }
 
 func (p *providers) Update(pat patch) {
@@ -115,7 +134,7 @@ func (p providers) get(name ServiceName) (string, error) {
 
 var prov = providers{
 	services: make(map[ServiceName][]string),
-	mutex: new(sync.RWMutex),
+	mutex:    new(sync.RWMutex),
 }
 
 func GetProvider(name ServiceName) (string, error) {

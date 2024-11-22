@@ -4,22 +4,22 @@ import (
 	"bytes"
 	"fmt"
 	stlog "log"
-	"luuk/distributed/registry"
 	"net/http"
 )
 
-func SetClientLogger(serviceURL string, clientService registry.ServiceName) {
+func SetClientLogger(serviceURL string, clientService string) {
 	stlog.SetPrefix(fmt.Sprintf("[%v] - ", clientService))
 	stlog.SetFlags(0)
 	stlog.SetOutput(&clientLogger{url: serviceURL})
 }
 
-type clientLogger struct{
+type clientLogger struct {
 	url string
 }
+
 func (cl clientLogger) Write(data []byte) (int, error) {
 	b := bytes.NewBuffer(data)
-	res, err := http.Post(cl.url + "/log", "text/plain", b)
+	res, err := http.Post(cl.url+"/log", "text/plain", b)
 	if err != nil {
 		return 0, err
 	}

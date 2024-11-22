@@ -5,7 +5,6 @@ import (
 	"fmt"
 	stlog "log"
 	"luuk/distributed/grades"
-	"luuk/distributed/log"
 	"luuk/distributed/registry"
 	"luuk/distributed/service"
 )
@@ -30,10 +29,6 @@ func main() {
 		stlog.Fatal(err)
 	}
 
-	if logProvider, err := registry.GetProvider(registry.LogService); err == nil {
-		fmt.Printf("Logging service found at: %s\n", logProvider)
-		log.SetClientLogger(logProvider, r.ServiceName)
-	}
 	<-ctx.Done()
 	fmt.Println("Shutdown grading service")
 }
